@@ -14,17 +14,15 @@ function registerUser($fullnames, $email, $password, $gender, $country){
     $conn = db();
    //check if user with this email already exist in the database
 
-    $result = queryMysql("SELECT * FROM Students WHERE email='$email'");
-    $result = mysqli_query($conn, $sql);
-
-	if ($result->num_rows) {
-		echo '<div class="alert alert-danger" role="alert">That username already exists</div>';
-      }
-      else
-      {
-        mysqli_query("INSERT INTO users VALUES ($fullnames, $email, $password, $gender, $country)");
-        echo '<div class="alert alert-success" role="alert">User Successfully registered</div>';
-      }
+	$conn = $this->db->connect();
+	if($this->confirmPasswordMatch($password, $confirmPassword)){
+		$sql = "INSERT INTO Students (`full_names`, `email`, `password`, `country`, `gender`) VALUES ('$fullname','$email', '$password', '$country', '$gender')";
+		if($conn->query($sql)){
+		   echo "User Successfully registered";
+		} else {
+			echo "That username already exists". $conn->error;
+		}
+	}
 }
 
 
@@ -37,18 +35,15 @@ function loginUser($email, $password){
     //open connection to the database and check if username exist in the database
     //if it does, check if the password is the same with what is given
     //if true then set user session for the user and redirect to the dasbboard
-    $sql = "SELECT * FROM Students where email = '$email' AND password = '$password'";
-    $result = mysqli_query($conn, $sql);
-	
-	$row = mysqli_fetch_array($result, MYSQLI_ASSOC);  
-    $count = mysqli_num_rows($result);  
-	
-	if($count == 1){  
-            header('Location: /dasbboard.php');  
-        }
-	else{  
-            loginUser()
-        }     
+    $conn = $this->db->connect();
+    $sql = "SELECT * FROM Students WHERE email='$email' AND `password`='$password'";
+    $result = $conn->query($sql);
+    if($result->num_rows > 0){
+        $_SESSION['email'] = $email;
+        header("Location: ../dashboard.php");
+    } else {
+        header("Location: forms/login.php");
+        }    
 }
 
 
@@ -59,20 +54,14 @@ function resetPassword($email, $password){
     echo "<h1 style='color: red'>RESET YOUR PASSWORD (IMPLEMENT ME)</h1>";
     //open connection to the database and check if username exist in the database
     //if it does, replace the password with $password given
-	$sql = "SELECT * FROM Students where email = '$email'";
-    $result = mysqli_query($conn, $sql);
-	
-	$count = mysqli_num_rows($result);  
-	
-	if($count != 1){
+	$conn = $this->db->connect();
+	$sql = "UPDATE users SET password = '$password' WHERE username = '$username'";
+	if($conn->query($sql) === TRUE){
+		header("Location: ../dashboard.php?update=success");
+	} else {
 		echo '<div class="alert alert-success" role="alert">User does not exist</div>';
-	}
-	
-	else{
-		mysqli_query("UPDATE users SET password='$newpassword' WHERE username='$email'");
-        echo '<div class="alert alert-success" role="alert">Password has been changed.</div>';
-
-        }     
+		header("Location: forms/resetpassword.php?error=1");
+	}    
 }
 
 function getusers(){ma
@@ -110,13 +99,26 @@ function getusers(){ma
  function deleteaccount($id){
      $conn = db();
      //delete user with the given id from the database
-    if (isset($_GET['action'])) {
-      if ($_GET['action'] == "delete") {
-
-        $user_id = $_GET['id'];
-		$sql = "'DELETE FROM STUDENTS WHERE email = '$email'";
-		$result = mysqli_query($conn, $sql);;
+	$conn = $this->db->connect();
+	$sql = "DELETE FROM Students WHERE id = '$id'";
+	if($conn->query($sql) === TRUE){
+		header("refresh:0.5; url=action.php?all");
+	} else {
+		header("refresh:0.5; url=action.php?all=?message=Error");
+	}
  }
+function logout($username){
+	session_start();
+	session_destroy();
+	header('Location: index.php');
+}
 
+function confirmPasswordMatch($password, $confirmPassword){
+	if($password === $confirmPassword){
+		return true;
+	} else {
+		return false;
+	}
+}
 
-        
+ }
